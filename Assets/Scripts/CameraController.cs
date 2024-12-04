@@ -7,9 +7,12 @@ public class CameraController : MonoBehaviour
     public bool debugs = true;
     Vector3 myLook;
     float lookSpeed = 100f;
-    public Camera myCam;
-    public float camLock = 90f;
+    [SerializeField] private Camera myCam;
+    [SerializeField]private float camLock = 90f;
     float onStartTimer;
+
+    [SerializeField] GameObject GameManager;
+
     void Awake()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -21,7 +24,6 @@ public class CameraController : MonoBehaviour
     void LateUpdate()
     {
         onStartTimer += Time.deltaTime;
-        Vector3 delta = DeltaLook() * Time.deltaTime;
         myLook += DeltaLook() * Time.deltaTime;
         myLook.y = Mathf.Clamp(myLook.y, -camLock, camLock);
 
@@ -32,6 +34,17 @@ public class CameraController : MonoBehaviour
         if (debugs)
         {
             Debug.DrawRay(myCam.transform.position, myCam.transform.forward * 10f, Color.black);
+        }
+
+        if (GameManager.GetComponent<UIManager>().gamePaused == true)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
     }
 

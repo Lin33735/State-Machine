@@ -10,19 +10,19 @@ public class PlayerBehavior : MonoBehaviour
 
     [Header("Movement Settings")]
     [SerializeField] private float baseSpeed;
-    private float speed;
+    [SerializeField] private float speed;
 
     [Header("Dashing Settings")]
     [SerializeField] private float dashSpeed;
     [SerializeField] private float dashDur;
     [SerializeField] private bool canDash;
+    [SerializeField] private float dashCD;
 
     Rigidbody rb;
 
     public enum PlayerState
     {
         Grounded,
-        Dashing,
         ChargingATK,
     }
     public PlayerState state;
@@ -31,6 +31,17 @@ public class PlayerBehavior : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         speed = baseSpeed;
+        canDash = true;
+    }
+
+    private void Update()
+    {
+        var dashInput = Input.GetButtonDown("Dash");
+        
+        if (dashInput && canDash)
+        {
+            Dash();
+        }
     }
 
     private void FixedUpdate()
@@ -39,10 +50,6 @@ public class PlayerBehavior : MonoBehaviour
         {
             case PlayerState.Grounded:
                 Walk();
-                break;
-
-            case PlayerState.Dashing:
-                Dash();
                 break;
         }
     }
@@ -71,7 +78,22 @@ public class PlayerBehavior : MonoBehaviour
 
     void Dash()
     {
-
+        speed = dashSpeed;
+        canDash = false;
+        StartCoroutine(StopDashing());
     }
 
+    private IEnumerator StopDashing()
+    {
+        yield return new WaitForSeconds(dashDur);
+        speed = baseSpeed;
+        StartCoroutine (DashCoolDown());
+        Debug.Log("Dash End");
+    }
+
+    private IEnumerator DashCoolDown()
+    {
+        yield return new WaitForSeconds(dashCD);
+        canDash = true;
+    }
 }
