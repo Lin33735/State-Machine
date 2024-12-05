@@ -70,6 +70,16 @@ public class PlayerBehavior : MonoBehaviour
         return curDir;
     }
 
+    private void OnTriggerEnter(Collider collision)
+    {
+        if (collision.gameObject.tag == "EnemyHitBox")
+        {
+            Debug.Log("Player Hit");
+            this.gameObject.SetActive(false);
+            
+        }
+    }
+
     void Walk()
     {
         Vector3 aimDir = (transform.TransformDirection(Dir(Debugs)));

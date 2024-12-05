@@ -19,16 +19,19 @@ public class BossBehavior : MonoBehaviour
     [SerializeField] private bool right;
     [SerializeField] private Vector3 circle;
 
+
     [Header("HitPoints")]
     [SerializeField] private int MaxHP = 100;
     public int curHP;
     public UnityEvent<int> Damage;
 
+    public GameObject ChargeATKHitBox;
+
     [Header("Target")]
     public GameObject Target;
     [SerializeField] private float distanceFromTarget;
     [SerializeField] private Vector3 direction;
-    private Vector3 targetPosition;
+    [SerializeField] private Vector3 targetPosition;
     private Quaternion targetRotation;
 
     [Header("States")]
@@ -68,7 +71,6 @@ public class BossBehavior : MonoBehaviour
             case BossState.Idle:
                 speed = baseSpeed / 2;
                 right = Random.Range(0, 2) == 0;
-                StartCoroutine(IdleDur());
                 break;
             case BossState.Charge:
                 speed = baseSpeed;
@@ -97,12 +99,12 @@ public class BossBehavior : MonoBehaviour
                 {
                     ChangeState(BossState.Charge);
                 }
+
                 break;
             case BossState.Charge:
-                StartCoroutine(Charge());
+                ChargeAtTarget();
                 break;
         }
-
     }
 
     void OnExitState(BossState exitState)
@@ -151,34 +153,18 @@ public class BossBehavior : MonoBehaviour
 
     void MoveInDirection(Vector3 direction, float speed)
     {
-        rb.MovePosition(this.transform.position + speed * Time.deltaTime * direction.normalized);
+        rb.MovePosition(this.transform.position + speed * Time.fixedDeltaTime * direction.normalized);
     }
 
     void ChargeAtTarget()
     {
-        speed = 115f;
+        speed = 150f;
+        ///MoveInDirection(direction, speed);
 
         Vector3 targetPositionXZ = new Vector3(targetPosition.x, (this).transform.position.y, targetPosition.z);
-
         transform.position = Vector3.MoveTowards(this.transform.position, targetPositionXZ, speed * Time.deltaTime);
-    }
 
-    private IEnumerator Charge()
-    {
-        yield return new WaitForSeconds(1);
-        ChargeAtTarget();
-        yield return new WaitForSeconds(1.5f);
-        ChargeAtTarget();
-        ChangeState(BossState.Idle);
-    }
-    private IEnumerator IdleDur()
-    {
-        yield return new WaitForSeconds(3);
-        if (Random.Range(0 ,6) == 0)
-        {
-            ChangeState(BossState.Throw);
-        }
-        else
+        if (targetPositionXZ == this.transform.position)
         {
             ChangeState(BossState.Idle);
         }
