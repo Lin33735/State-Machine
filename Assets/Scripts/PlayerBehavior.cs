@@ -1,15 +1,18 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
+using Unity.VisualScripting;
 using UnityEngine;
+using static BossBehavior;
 
 public class PlayerBehavior : MonoBehaviour
 {
     public bool Debugs = true;
 
     [Header("Movement Settings")]
-    [SerializeField] private float baseSpeed;
+    [SerializeField] private float baseSpeed = 10;
     [SerializeField] private float speed;
 
     [Header("Dashing Settings")]
@@ -20,18 +23,70 @@ public class PlayerBehavior : MonoBehaviour
 
     Rigidbody rb;
 
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+    }
+    void Start()
+    {
+        canDash = true;
+
+        ChangeState(PlayerState.Grounded);
+    }
+
     public enum PlayerState
     {
         Grounded,
         ChargingATK,
     }
-    public PlayerState state;
+    public PlayerState curState;
 
-    void Start()
+    void OnEnterState(PlayerState enterState)
     {
-        rb = GetComponent<Rigidbody>();
-        speed = baseSpeed;
-        canDash = true;
+        switch (enterState)
+        {
+            case PlayerState.Grounded:
+                speed = baseSpeed;
+                break;
+            case PlayerState.ChargingATK:
+                speed = 1;  
+                break;
+        }
+    }
+    void FixedUpdateState(PlayerState fUpdateState)
+    {
+        switch (fUpdateState)
+        {
+            case PlayerState.Grounded:
+                Walk();
+                break;
+            case PlayerState.ChargingATK:
+                Walk();
+                Debug.Log("ChargingAttack");
+                break;
+        }
+    }
+    void OnExitState(PlayerState exitState)
+    {
+        switch (exitState)
+        {
+            case PlayerState.Grounded:
+                break;
+            case PlayerState.ChargingATK:
+                break;
+        }
+    }
+
+    void ChangeState(PlayerState newState)
+    {
+        if (curState == newState)
+        {
+            return;
+        }
+
+        OnExitState(curState);
+        curState = newState;
+        OnEnterState(curState);
     }
 
     private void Update()
@@ -42,16 +97,22 @@ public class PlayerBehavior : MonoBehaviour
         {
             Dash();
         }
+
+        var chargeATK = Input.GetMouseButtonDown(0);
+
+        if (chargeATK)
+        {
+            ChangeState(PlayerState.ChargingATK);
+        }
+        else
+        {
+            ChangeState(PlayerState.Grounded);
+        }
     }
 
     private void FixedUpdate()
     {
-        switch (state)
-        {
-            case PlayerState.Grounded:
-                Walk();
-                break;
-        }
+        FixedUpdateState(curState);
     }
 
     Vector3 Dir(bool Debugs)
@@ -76,7 +137,6 @@ public class PlayerBehavior : MonoBehaviour
         {
             Debug.Log("Player Hit");
             this.gameObject.SetActive(false);
-            
         }
     }
 

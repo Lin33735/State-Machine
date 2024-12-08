@@ -41,7 +41,7 @@ public class BossBehavior : MonoBehaviour
         Idle,
         Charge,
         Leap,
-        Throw,
+        Shoot,
     }
     void Awake()
     {
@@ -76,6 +76,9 @@ public class BossBehavior : MonoBehaviour
                 speed = baseSpeed;
                 LookAt();
                 targetPosition = Target.transform.position;
+                ChargeATKHitBox.gameObject.SetActive(true);
+                break;
+            case BossState.Shoot:
                 break;
         }
     }
@@ -113,6 +116,9 @@ public class BossBehavior : MonoBehaviour
         {
             case BossState.Idle:
                 break;
+            case BossState.Charge:
+                ChargeATKHitBox.gameObject.SetActive(false);
+                break;
         }
     }
 
@@ -121,7 +127,6 @@ public class BossBehavior : MonoBehaviour
         OnExitState(curState);
         curState = newState;
         OnEnterState(curState);
-
     }
 
     void LookAt()
