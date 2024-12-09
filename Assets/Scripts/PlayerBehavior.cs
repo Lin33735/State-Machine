@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UIElements;
 using static BossBehavior;
 
 public class PlayerBehavior : MonoBehaviour
@@ -14,6 +15,7 @@ public class PlayerBehavior : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField] private float baseSpeed = 10;
     [SerializeField] private float speed;
+    [SerializeField] private float curSpeed;
 
     [Header("Dashing Settings")]
     [SerializeField] private float dashSpeed;
@@ -21,15 +23,28 @@ public class PlayerBehavior : MonoBehaviour
     [SerializeField] private bool canDash;
     [SerializeField] private float dashCD;
 
+    [Header("Attack Settings")]
+    [SerializeField] private GameObject AttackHitBox;
+    [SerializeField] private float attackCharge;
+    [SerializeField] private float attackChargeSpeed;
+    [SerializeField] private bool attackCharged;
+
     Rigidbody rb;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
     }
+
     void Start()
     {
         canDash = true;
+        dashSpeed = 100;
+        dashDur = 0.2f;
+
+        attackChargeSpeed = 3f;
+
+        speed = baseSpeed;
 
         ChangeState(PlayerState.Grounded);
     }
@@ -37,7 +52,7 @@ public class PlayerBehavior : MonoBehaviour
     public enum PlayerState
     {
         Grounded,
-        ChargingATK,
+        Attack,
     }
     public PlayerState curState;
 
@@ -48,11 +63,12 @@ public class PlayerBehavior : MonoBehaviour
             case PlayerState.Grounded:
                 speed = baseSpeed;
                 break;
-            case PlayerState.ChargingATK:
+            case PlayerState.Attack:
                 speed = 1;  
                 break;
         }
     }
+
     void FixedUpdateState(PlayerState fUpdateState)
     {
         switch (fUpdateState)
@@ -60,19 +76,27 @@ public class PlayerBehavior : MonoBehaviour
             case PlayerState.Grounded:
                 Walk();
                 break;
-            case PlayerState.ChargingATK:
+            case PlayerState.Attack:
                 Walk();
-                Debug.Log("ChargingAttack");
+                ChargingAttack();
                 break;
         }
     }
+
     void OnExitState(PlayerState exitState)
     {
         switch (exitState)
         {
             case PlayerState.Grounded:
                 break;
-            case PlayerState.ChargingATK:
+            case PlayerState.Attack:
+                speed = baseSpeed;
+                attackCharge = 0;
+                if (attackCharged)
+                {
+                    attackCharged = false;
+                    AttackHitBox.gameObject.SetActive(false);
+                }
                 break;
         }
     }
@@ -91,23 +115,8 @@ public class PlayerBehavior : MonoBehaviour
 
     private void Update()
     {
-        var dashInput = Input.GetButtonDown("Dash");
-        
-        if (dashInput && canDash)
-        {
-            Dash();
-        }
-
-        var chargeATK = Input.GetMouseButtonDown(0);
-
-        if (chargeATK)
-        {
-            ChangeState(PlayerState.ChargingATK);
-        }
-        else
-        {
-            ChangeState(PlayerState.Grounded);
-        }
+        OnInputDash();
+        OnHoldAttackState();
     }
 
     private void FixedUpdate()
@@ -131,15 +140,6 @@ public class PlayerBehavior : MonoBehaviour
         return curDir;
     }
 
-    private void OnTriggerEnter(Collider collision)
-    {
-        if (collision.gameObject.tag == "EnemyHitBox")
-        {
-            Debug.Log("Player Hit");
-            this.gameObject.SetActive(false);
-        }
-    }
-
     void Walk()
     {
         Vector3 aimDir = (transform.TransformDirection(Dir(Debugs)));
@@ -148,15 +148,57 @@ public class PlayerBehavior : MonoBehaviour
 
     void Dash()
     {
+        curSpeed = speed;
         speed = dashSpeed;
         canDash = false;
         StartCoroutine(StopDashing());
     }
 
+    void OnHoldAttackState()
+    {
+        var chargeATK = Input.GetMouseButtonDown(0);
+        var releaseATK = Input.GetMouseButtonUp(0);
+
+        if (chargeATK)
+        {
+            ChangeState(PlayerState.Attack);
+        }
+        if (releaseATK && attackCharged)
+        {
+            StartCoroutine(Attack());
+        }
+        if (releaseATK && !attackCharged)
+        {
+            ChangeState(PlayerState.Grounded);
+        }
+    }
+
+    void OnInputDash()
+    {
+        var dashInput = Input.GetButtonDown("Dash");
+
+        if (dashInput && canDash)
+        {
+            Dash();
+        }
+    }
+
+    void ChargingAttack()
+    {
+        if (attackCharge > attackChargeSpeed)
+        {
+            attackCharged = true;
+        }
+        else
+        {
+            attackCharge += Time.deltaTime;
+        }
+    }
+
     private IEnumerator StopDashing()
     {
         yield return new WaitForSeconds(dashDur);
-        speed = baseSpeed;
+        speed = curSpeed;
         StartCoroutine (DashCoolDown());
         Debug.Log("Dash End");
     }
@@ -165,5 +207,12 @@ public class PlayerBehavior : MonoBehaviour
     {
         yield return new WaitForSeconds(dashCD);
         canDash = true;
+    }
+
+    private IEnumerator Attack()
+    {
+        AttackHitBox.gameObject.SetActive(true);
+        yield return new WaitForSeconds(0.2f);
+        ChangeState(PlayerState.Grounded);
     }
 }

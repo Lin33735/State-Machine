@@ -11,54 +11,71 @@ public class BossBehavior : MonoBehaviour
 {
     public bool debug = true;
     Rigidbody rb;
+    Material mat;
+    Color color;
 
     [Header("Movement")]
     [SerializeField] private float baseSpeed;
-    private float speed;
-    public float RotationSpeed;
+    [SerializeField] private float speed;
+    [SerializeField] private float RotationSpeed;
     [SerializeField] private bool right;
     [SerializeField] private Vector3 circle;
 
-
     [Header("HitPoints")]
+    [SerializeField] private GameObject ChargeATKHitBox;
     [SerializeField] private int MaxHP = 100;
-    public int curHP;
-    public UnityEvent<int> Damage;
-
-    public GameObject ChargeATKHitBox;
+    [SerializeField] private int curHP;
 
     [Header("Target")]
-    public GameObject Target;
+    [SerializeField] private GameObject Target;
     [SerializeField] private float distanceFromTarget;
     [SerializeField] private Vector3 direction;
     [SerializeField] private Vector3 targetPosition;
-    private Quaternion targetRotation;
+    [SerializeField] private Quaternion targetRotation;
+
+    [Header("Attack Settings")]
+    [SerializeField] private GameObject Projectile;
+    [SerializeField] private float shootSpeed;
+    [SerializeField] private float shootTimer;
+    [SerializeField] private float shootDur;
+    [SerializeField] private float IdleStateDur;
 
     [Header("States")]
-    public BossState curState; 
+    [SerializeField] private bool trySwitchState;
+    public BossState curState;
+
     public enum BossState
     {
         Idle,
         Charge,
-        Leap,
         Shoot,
     }
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        mat = GetComponent<Renderer>().material;
     }
 
     void Start()
     {
+        color = mat.color; 
+
         curHP = MaxHP;
         speed = baseSpeed;
 
         ChangeState(BossState.Idle);
     }
+
     private void Update()
     {
         distanceFromTarget = Vector3.Distance(transform.position, Target.transform.position);
+
+        if (curHP < 0)
+        {
+            Defeated();
+        }
     }
+
     private void FixedUpdate()
     {
         FixedUpdateState(curState);
@@ -79,6 +96,9 @@ public class BossBehavior : MonoBehaviour
                 ChargeATKHitBox.gameObject.SetActive(true);
                 break;
             case BossState.Shoot:
+                rb.useGravity = false;
+                shootSpeed = 0.1f;
+                shootDur = 20;
                 break;
         }
     }
@@ -102,10 +122,30 @@ public class BossBehavior : MonoBehaviour
                 {
                     ChangeState(BossState.Charge);
                 }
-
+                IdleStateDur += Time.deltaTime;
+                if (IdleStateDur > 4)
+                {
+                    IdleStateDur = 0;
+                    StartCoroutine(AttemptSwitchState());
+                }
                 break;
             case BossState.Charge:
                 ChargeAtTarget();
+                break;
+            case BossState.Shoot:
+                LookAt();
+                if (transform.position.y < 10)
+                {
+                    Levitate();
+                }
+                else
+                {
+                    ShootAtTarget();
+                }
+                if (distanceFromTarget > 40)
+                {
+                    StartCoroutine(Stun());
+                }
                 break;
         }
     }
@@ -119,6 +159,9 @@ public class BossBehavior : MonoBehaviour
             case BossState.Charge:
                 ChargeATKHitBox.gameObject.SetActive(false);
                 break;
+            case BossState.Shoot:
+                rb.useGravity = true;
+                break;
         }
     }
 
@@ -127,6 +170,14 @@ public class BossBehavior : MonoBehaviour
         OnExitState(curState);
         curState = newState;
         OnEnterState(curState);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.tag == "PlayerAttackHitBox")
+        {
+            StartCoroutine(TakeDamage());
+        }
     }
 
     void LookAt()
@@ -173,5 +224,59 @@ public class BossBehavior : MonoBehaviour
         {
             ChangeState(BossState.Idle);
         }
+    }
+
+    void ShootAtTarget()
+    {
+        shootTimer += Time.deltaTime;
+        shootDur += Time.deltaTime;
+
+        if (shootTimer > shootSpeed)
+        {
+            Instantiate(Projectile,this.transform.position, Quaternion.identity);
+            shootTimer = 0;
+        }
+        if (shootDur < 0)
+        {
+            StartCoroutine(Stun());
+        }
+    }
+
+    void Levitate()
+    {
+        Vector3 levpos = new Vector3(this.transform.position.x, this.transform.position.y + 1, this.transform.position.z);
+        transform.position = Vector3.MoveTowards(this.transform.position, levpos, speed * Time.deltaTime);
+    }
+
+    void Defeated()
+    {
+        gameObject.SetActive(false);
+    }
+
+    private IEnumerator TakeDamage()
+    {
+        curHP -= 20;
+        mat.color = Color.white;
+        yield return new WaitForSeconds(0.3f);
+        mat.color = color;
+    }
+
+    private IEnumerator AttemptSwitchState()
+    {
+        if (Random.Range(0, 4) == 0)
+        {
+            ChangeState(BossState.Shoot);
+        }
+        else
+        {
+            right = Random.Range(0, 2) == 0;
+        }
+        yield return this;
+    }
+
+    private IEnumerator Stun()
+    {
+        yield return new WaitForSeconds(2);
+        ChangeState(BossState.Idle);
     }
 }
