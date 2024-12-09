@@ -29,6 +29,9 @@ public class PlayerBehavior : MonoBehaviour
     [SerializeField] private float attackChargeSpeed;
     [SerializeField] private bool attackCharged;
 
+    public StatBars StaminaBar;
+    public StatBars ATKChargeBar;
+
     Rigidbody rb;
 
     private void Awake()
@@ -41,8 +44,10 @@ public class PlayerBehavior : MonoBehaviour
         canDash = true;
         dashSpeed = 100;
         dashDur = 0.2f;
+        dashCD = 0;
 
-        attackChargeSpeed = 3f;
+
+        attackChargeSpeed = 2;
 
         speed = baseSpeed;
 
@@ -92,6 +97,7 @@ public class PlayerBehavior : MonoBehaviour
             case PlayerState.Attack:
                 speed = baseSpeed;
                 attackCharge = 0;
+                ATKChargeBar.SetATKCharge(attackCharge);
                 if (attackCharged)
                 {
                     attackCharged = false;
@@ -122,6 +128,16 @@ public class PlayerBehavior : MonoBehaviour
     private void FixedUpdate()
     {
         FixedUpdateState(curState);
+
+        if (dashCD >= 0)
+        {
+            dashCD -= Time.deltaTime;
+            StaminaBar.SetStamina(dashCD);
+            if (dashCD < 0)
+            {
+                canDash = true;
+            }
+        }
     }
 
     Vector3 Dir(bool Debugs)
@@ -144,14 +160,6 @@ public class PlayerBehavior : MonoBehaviour
     {
         Vector3 aimDir = (transform.TransformDirection(Dir(Debugs)));
         rb.velocity = new Vector3(aimDir.x * speed, rb.velocity.y, aimDir.z * speed);
-    }
-
-    void Dash()
-    {
-        curSpeed = speed;
-        speed = dashSpeed;
-        canDash = false;
-        StartCoroutine(StopDashing());
     }
 
     void OnHoldAttackState()
@@ -179,7 +187,10 @@ public class PlayerBehavior : MonoBehaviour
 
         if (dashInput && canDash)
         {
-            Dash();
+            curSpeed = speed;
+            speed = dashSpeed;
+            canDash = false;
+            StartCoroutine(StopDashing());
         }
     }
 
@@ -192,6 +203,7 @@ public class PlayerBehavior : MonoBehaviour
         else
         {
             attackCharge += Time.deltaTime;
+            ATKChargeBar.SetATKCharge(attackCharge);
         }
     }
 
@@ -199,20 +211,14 @@ public class PlayerBehavior : MonoBehaviour
     {
         yield return new WaitForSeconds(dashDur);
         speed = curSpeed;
-        StartCoroutine (DashCoolDown());
-        Debug.Log("Dash End");
-    }
-
-    private IEnumerator DashCoolDown()
-    {
-        yield return new WaitForSeconds(dashCD);
-        canDash = true;
+        dashCD = 2;
+        StaminaBar.MaxStamina(dashCD);
     }
 
     private IEnumerator Attack()
     {
         AttackHitBox.gameObject.SetActive(true);
-        yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(0.5f);
         ChangeState(PlayerState.Grounded);
     }
 }

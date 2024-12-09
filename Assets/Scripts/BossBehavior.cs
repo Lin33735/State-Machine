@@ -13,6 +13,7 @@ public class BossBehavior : MonoBehaviour
     Rigidbody rb;
     Material mat;
     Color color;
+    public GameObject winPanel;
 
     [Header("Movement")]
     [SerializeField] private float baseSpeed;
@@ -25,6 +26,7 @@ public class BossBehavior : MonoBehaviour
     [SerializeField] private GameObject ChargeATKHitBox;
     [SerializeField] private int MaxHP = 100;
     [SerializeField] private int curHP;
+    public StatBars BossHPBar;
 
     [Header("Target")]
     [SerializeField] private GameObject Target;
@@ -61,6 +63,7 @@ public class BossBehavior : MonoBehaviour
         color = mat.color; 
 
         curHP = MaxHP;
+        BossHPBar.MaxBossHP(MaxHP);
         speed = baseSpeed;
 
         ChangeState(BossState.Idle);
@@ -98,7 +101,7 @@ public class BossBehavior : MonoBehaviour
             case BossState.Shoot:
                 rb.useGravity = false;
                 shootSpeed = 0.1f;
-                shootDur = 20;
+                shootDur = 10;
                 break;
         }
     }
@@ -142,7 +145,7 @@ public class BossBehavior : MonoBehaviour
                 {
                     ShootAtTarget();
                 }
-                if (distanceFromTarget > 40)
+                if (distanceFromTarget > 60)
                 {
                     StartCoroutine(Stun());
                 }
@@ -229,7 +232,7 @@ public class BossBehavior : MonoBehaviour
     void ShootAtTarget()
     {
         shootTimer += Time.deltaTime;
-        shootDur += Time.deltaTime;
+        shootDur -= Time.deltaTime;
 
         if (shootTimer > shootSpeed)
         {
@@ -251,11 +254,15 @@ public class BossBehavior : MonoBehaviour
     void Defeated()
     {
         gameObject.SetActive(false);
+        winPanel.SetActive(true);
+        Time.timeScale = 0f;
+        Cursor.visible = true;
     }
 
     private IEnumerator TakeDamage()
     {
         curHP -= 20;
+        BossHPBar.SetBossHP(curHP);
         mat.color = Color.white;
         yield return new WaitForSeconds(0.3f);
         mat.color = color;
@@ -263,7 +270,7 @@ public class BossBehavior : MonoBehaviour
 
     private IEnumerator AttemptSwitchState()
     {
-        if (Random.Range(0, 4) == 0)
+        if (Random.Range(0, 3) == 0)
         {
             ChangeState(BossState.Shoot);
         }
