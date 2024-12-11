@@ -5049,6 +5049,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   debug: 1
   winPanel: {fileID: 1193194974}
+  GameManager: {fileID: 2112103237}
   baseSpeed: 10
   speed: 0
   RotationSpeed: 10
@@ -5699,6 +5700,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 41315219}
   losePanel: {fileID: 115412103}
+  GameManager: {fileID: 2112103237}
 --- !u!1001 &1378742844807506711
 PrefabInstance:
   m_ObjectHideFlags: 0

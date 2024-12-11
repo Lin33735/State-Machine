@@ -14,6 +14,7 @@ public class BossBehavior : MonoBehaviour
     Material mat;
     Color color;
     public GameObject winPanel;
+    public GameObject GameManager;
 
     [Header("Movement")]
     [SerializeField] private float baseSpeed;
@@ -256,7 +257,7 @@ public class BossBehavior : MonoBehaviour
         gameObject.SetActive(false);
         winPanel.SetActive(true);
         Time.timeScale = 0f;
-        Cursor.visible = true;
+        GameManager.GetComponent<UIManager>().gamePaused = true;
     }
 
     private IEnumerator TakeDamage()
